@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>스매시 마스터즈: 배드민턴 로얄 | 2D 배드민턴 액션 게임</title>
+    <meta name="description" content="다이내믹한 셔틀콕 물리와 화려한 점프 스매시! 1인용 AI 대전 및 2인용 로컬 대전을 지원하는 웹 배드민턴 아케이드 게임">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Master Screen Container -->
+    <div id="gameContainer">
+        <!-- Main Game Canvas -->
+        <canvas id="gameCanvas" width="1200" height="680"></canvas>
+
+        <!-- Audio Quick Controls (Top-Right) -->
+        <div class="audio-controls-bar">
+            <button id="btnToggleBgm" class="btn-icon-toggle active" aria-label="Toggle Background Music">🎵 BGM: ON</button>
+            <button id="btnToggleSfx" class="btn-icon-toggle active" aria-label="Toggle Sound Effects">🔊 SFX: ON</button>
+        </div>
+
+        <!-- In-Game HUD Overlay -->
+        <header id="hudOverlay" class="hidden">
+            <div class="hud-top-bar">
+                <!-- Player 1 Score Card -->
+                <div class="player-hud-card p1">
+                    <div class="player-avatar-badge">1P</div>
+                    <div class="player-info">
+                        <div class="player-label" id="hudP1Name">PLAYER 1</div>
+                        <div class="super-gauge-container">
+                            <div class="super-gauge-fill" id="p1SuperFill"></div>
+                        </div>
+                    </div>
+                    <div class="hud-score-number" id="hudScore1">0</div>
+                </div>
+
+                <!-- Center Match Radar & Rally Stats -->
+                <div class="center-hud-stats">
+                    <div class="match-target-tag">CHAMPIONSHIP TOUR</div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">RALLY</span>
+                            <span class="stat-val" id="hudRallyCount">0 회</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">SMASH SPEED</span>
+                            <span class="stat-val speed" id="hudSmashSpeed">0 km/h</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Player 2 / AI Score Card -->
+                <div class="player-hud-card p2">
+                    <div class="player-avatar-badge">2P</div>
+                    <div class="player-info">
+                        <div class="player-label" id="hudP2Name">AI (NORMAL)</div>
+                        <div class="super-gauge-container">
+                            <div class="super-gauge-fill" id="p2SuperFill"></div>
+                        </div>
+                    </div>
+                    <div class="hud-score-number" id="hudScore2">0</div>
+                </div>
+            </div>
+
+            <!-- Bottom Floating Quick Controls Tip -->
+            <div class="hud-bottom-controls">
+                <span>1P: <kbd>A</kbd><kbd>D</kbd> 이동 | <kbd>W</kbd> 점프 | <kbd>J</kbd> 드롭 | <kbd>K</kbd> 클리어 | <kbd>L</kbd> 스매시 | <kbd>Space</kbd> 스마트샷</span>
+                <span>[ESC] 일시정지</span>
+            </div>
+
+            <!-- Virtual Touch / Mobile Action Controls -->
+            <div id="touchControls" class="touch-controls-bar">
+                <div class="touch-dpad">
+                    <button id="btnTouchLeft" class="touch-btn" aria-label="Move Left">◀</button>
+                    <button id="btnTouchRight" class="touch-btn" aria-label="Move Right">▶</button>
+                </div>
+                <div class="touch-actions">
+                    <button id="btnTouchJump" class="touch-btn action-jump" aria-label="Jump">▲ 점프</button>
+                    <button id="btnTouchDrop" class="touch-btn action-drop" aria-label="Drop Shot">드롭</button>
+                    <button id="btnTouchClear" class="touch-btn action-clear" aria-label="Clear Shot">클리어</button>
+                    <button id="btnTouchSmash" class="touch-btn action-smash" aria-label="Smash Shot">스매시</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Menu Overlay -->
+        <main id="mainMenu">
+            <div class="game-logo-container">
+                <div class="badge-tag">🏸 2D ARCADE BADMINTON</div>
+                <h1 class="main-title">SMASH MASTERS</h1>
+                <p class="sub-title">배드민턴 로얄 : 월드 투어</p>
+            </div>
+
+            <div class="menu-buttons">
+                <button id="btnStartPvE" class="btn-primary">
+                    <span>⚡ 싱글 플레이 (vs AI)</span>
+                </button>
+                <button id="btnStartPvP" class="btn-accent">
+                    <span>⚔️ 2인 로컬 대전 (1 vs 1)</span>
+                </button>
+                <button id="btnCharSelect" class="btn-secondary">
+                    <span>👤 캐릭터 선택</span>
+                </button>
+                <div class="btn-row">
+                    <button id="btnHowToPlay" class="btn-secondary">
+                        <span>📖 조작법</span>
+                    </button>
+                    <button id="btnSettings" class="btn-secondary">
+                        <span>⚙️ 설정</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Character Selection Modal -->
+        <div id="charSelectModal" class="modal-overlay">
+            <div class="modal-card">
+                <button class="modal-close" aria-label="Close Modal">&times;</button>
+                <h2 class="modal-title">선수 선택 (CHARACTER SELECT)</h2>
+                
+                <h3 style="font-size: 15px; color: #38bdf8; margin-bottom: 8px;">PLAYER 1 선택</h3>
+                <div class="roster-grid" id="p1RosterList"></div>
+
+                <h3 style="font-size: 15px; color: #f43f5e; margin-bottom: 8px;">PLAYER 2 / AI 선택</h3>
+                <div class="roster-grid" id="p2RosterList"></div>
+
+                <button id="btnConfirmRoster" class="btn-primary" style="width: 100%; margin-top: 10px;">선택 완료 및 경기 시작</button>
+            </div>
+        </div>
+
+        <!-- How to Play Modal -->
+        <div id="howToPlayModal" class="modal-overlay">
+            <div class="modal-card">
+                <button class="modal-close" aria-label="Close Modal">&times;</button>
+                <h2 class="modal-title">게임 조작법 & 샷 테크닉</h2>
+
+                <table class="guide-table">
+                    <thead>
+                        <tr>
+                            <th>구분</th>
+                            <th>1P 조작키</th>
+                            <th>2P 로컬 대전키</th>
+                            <th>샷 설명</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>좌우 이동</strong></td>
+                            <td><kbd>A</kbd> / <kbd>D</kbd></td>
+                            <td><kbd>←</kbd> / <kbd>→</kbd></td>
+                            <td>코트 좌우 빠른 풋워크</td>
+                        </tr>
+                        <tr>
+                            <td><strong>점프</strong></td>
+                            <td><kbd>W</kbd></td>
+                            <td><kbd>↑</kbd></td>
+                            <td>체공 중 타격 시 높은 타점 확보</td>
+                        </tr>
+                        <tr>
+                            <td><strong>헤어핀 / 드롭</strong></td>
+                            <td><kbd>J</kbd> 또는 <kbd>Z</kbd></td>
+                            <td><kbd>1</kbd> 또는 <kbd>[</kbd></td>
+                            <td>네트 바로 앞 짧게 떨어뜨리는 기습 샷</td>
+                        </tr>
+                        <tr>
+                            <td><strong>하이 클리어</strong></td>
+                            <td><kbd>K</kbd> 또는 <kbd>X</kbd></td>
+                            <td><kbd>2</kbd> 또는 <kbd>]</kbd></td>
+                            <td>상대 백코트 깊숙이 높게 띄우는 수비 샷</td>
+                        </tr>
+                        <tr>
+                            <td><strong>스매시 / 드라이브</strong></td>
+                            <td><kbd>L</kbd> 또는 <kbd>C</kbd></td>
+                            <td><kbd>3</kbd> 또는 <kbd>\</kbd></td>
+                            <td>점프 후 타격 시 300km/h+ 급강하 파워 스매시!</td>
+                        </tr>
+                        <tr>
+                            <td><strong>필살기 (SUPER)</strong></td>
+                            <td><kbd>U</kbd> 또는 <kbd>V</kbd></td>
+                            <td><kbd>0</kbd> 또는 <kbd>/</kbd></td>
+                            <td>게이지 100% 충전 시 초고속 번개 스매시</td>
+                        </tr>
+                        <tr>
+                            <td><strong>스마트 샷</strong></td>
+                            <td><kbd>Space</kbd></td>
+                            <td>-</td>
+                            <td>1인용 전용: 상황에 맞는 최적의 샷 자동 선택</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 18px; padding: 12px; background: rgba(56, 189, 248, 0.1); border-left: 4px solid #38bdf8; border-radius: 6px; font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+                    💡 <strong>꿀팁</strong>: 셔틀콕이 머리 위 높이 떠올랐을 때 점프(<kbd>W</kbd>) 후 최고점에서 스매시(<kbd>L</kbd>)를 치면 강력한 <strong>점프 스매시</strong>가 발동합니다!
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="modal-overlay">
+            <div class="modal-card">
+                <button class="modal-close" aria-label="Close Modal">&times;</button>
+                <h2 class="modal-title">매치 설정 (SETTINGS)</h2>
+
+                <div class="settings-group">
+                    <label for="diffSelect">AI 난이도</label>
+                    <select id="diffSelect" class="settings-select">
+                        <option value="easy">쉬움 (Easy) - 여유로운 랠리</option>
+                        <option value="normal" selected>보통 (Normal) - 정석적인 플레이</option>
+                        <option value="hard">어려움 (Hard) - 날카로운 점프 스매시 & 드롭</option>
+                    </select>
+                </div>
+
+                <div class="settings-group">
+                    <label for="pointsSelect">목표 점수</label>
+                    <select id="pointsSelect" class="settings-select">
+                        <option value="5">5점 내기 (빠른 한판)</option>
+                        <option value="7" selected>7점 내기 (추천)</option>
+                        <option value="11">11점 내기 (정규 단판)</option>
+                        <option value="21">21점 내기 (공식 풀세트)</option>
+                    </select>
+                </div>
+
+                <button class="btn-primary modal-close" style="width: 100%; margin-top: 20px;">설정 저장</button>
+            </div>
+        </div>
+
+        <!-- Pause Modal -->
+        <div id="pauseModal" class="modal-overlay">
+            <div class="modal-card" style="max-width: 400px; text-align: center;">
+                <h2 class="modal-title">일시 정지 (PAUSED)</h2>
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+                    <button id="btnResume" class="btn-primary">계속하기 (Resume)</button>
+                    <button id="btnRestart" class="btn-secondary">재경기 (Restart)</button>
+                    <button id="btnQuit" class="btn-secondary">메인 메뉴로 (Quit)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div id="gameOverModal" class="modal-overlay">
+            <div class="modal-card" style="max-width: 460px; text-align: center;">
+                <h2 class="modal-title" id="gameOverTitle">🎉 VICTORY!</h2>
+                <p id="gameOverSubtitle" style="font-size: 18px; color: #94a3b8; font-weight: 700; margin-bottom: 20px;">FINAL SCORE: 7 - 4</p>
+                
+                <div id="gameOverStats" style="margin-bottom: 24px; text-align: left;"></div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button id="btnRematch" class="btn-primary" style="flex: 1;">다시 대결 (Rematch)</button>
+                    <button id="btnGameOverMenu" class="btn-secondary" style="flex: 1;">메뉴로 (Menu)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts in modular order -->
+    <script src="js/audio.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/effects.js"></script>
+    <script src="js/character.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
